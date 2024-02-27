@@ -43,6 +43,7 @@ build/
 /hubble-fe/node_modules
 /hubble-fe/.pnp
 .pnp.js
+/hugegraph-hubble/hubble-fe/node/node
 
 # testingå
 /hubble-fe/coverage
@@ -95,3 +96,7 @@ tree.txt
 
 # system ignore
 Thumbs.db
+
+# client-go
+go.env
+

@@ -24,13 +24,14 @@ fi
 COMMIT_ID=$1
 HUGEGRAPH_GIT_URL="https://github.com/apache/hugegraph.git"
 
-git clone --depth 100 ${HUGEGRAPH_GIT_URL} hugegraph
+git clone --depth 150 ${HUGEGRAPH_GIT_URL} hugegraph
 cd hugegraph
 git checkout "${COMMIT_ID}"
 mvn package -DskipTests -Dmaven.javadoc.skip=true -ntp
 # TODO: lack incubator after apache package release (update it later)
-mv apache-hugegraph-*.tar.gz ../
-cd ../
+cd hugegraph-server
+mv apache-hugegraph-*.tar.gz ../../
+cd ../../
 rm -rf hugegraph
 tar zxf apache-hugegraph-*.tar.gz
 

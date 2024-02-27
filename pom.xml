@@ -28,7 +28,8 @@
     <name>${project.artifactId}</name>
     <url>https://github.com/apache/incubator-hugegraph-toolchain</url>
     <description>
-        hugegraph-toolchain is the integration project of a series of utilities for HugeGraph, it includes 4 main modules (loader/hubble/tools/client)
+        hugegraph-toolchain is the integration project contains a series of utilities for HugeGraph,
+        it includes 5+ main modules (loader/hubble/tools/clients/data connector)
     </description>
 
     <parent>
@@ -47,7 +48,7 @@
 
     <developers>
         <developer>
-            <id>Apache Hugegraph(Incubating)</id>
+            <id>Apache HugeGraph(Incubating)</id>
             <email>dev-subscribe@hugegraph.apache.org</email>
             <url>https://hugegraph.apache.org/</url>
         </developer>
@@ -90,13 +91,15 @@
     <modules>
         <module>hugegraph-client</module>
         <module>hugegraph-loader</module>
+        <module>hugegraph-spark-connector</module>
         <module>hugegraph-tools</module>
         <module>hugegraph-hubble</module>
         <module>hugegraph-dist</module>
     </modules>
 
     <properties>
-        <revision>1.0.0</revision>
+        <revision>1.2.0</revision>
+        <hugegraph.common.version>1.2.0</hugegraph.common.version>
         <release.name>${project.artifactId}</release.name>
         <final.name>apache-${release.name}-incubating-${project.version}</final.name>
         <assembly.dir>${project.basedir}/assembly</assembly.dir>
@@ -119,12 +122,10 @@
         <docker.hub>hugegraph</docker.hub>
         <docker.repo>${project.name}</docker.repo>
         <docker.tag>${project.version}</docker.tag>
-        <hugegraph.common.version>1.0.0</hugegraph.common.version>
         <hive.version>3.1.3</hive.version>
         <hbase.version>2.2.3</hbase.version>
         <hadoop.version>3.3.1</hadoop.version>
         <zookeeper.version>3.6.2</zookeeper.version>
-        <jersey.version>3.0.3</jersey.version>
         <junit.version>4.12</junit.version>
         <mockito.version>2.8.47</mockito.version>
         <lombok.version>1.18.8</lombok.version>
@@ -138,7 +139,6 @@
         <commons.net.version>3.9.0</commons.net.version>
         <commons.math3.version>3.4.1</commons.math3.version>
         <commons.logging.version>1.1.3</commons.logging.version>
-        <guava.version>32.0.1-jre</guava.version>
         <lz4.version>1.4.0</lz4.version>
         <jcommand-version>1.72</jcommand-version>
         <jackson.version>2.12.3</jackson.version>
@@ -151,13 +151,6 @@
     <!-- submodules will not inherit the dependencies unless they address it -->
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.glassfish.jersey</groupId>
-                <artifactId>jersey-bom</artifactId>
-                <version>${jersey.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
             <dependency>
                 <groupId>org.apache.hugegraph</groupId>
                 <artifactId>hugegraph-common</artifactId>
@@ -236,11 +229,6 @@
                         <artifactId>avalon-framework</artifactId>
                     </exclusion>
                 </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>com.google.guava</groupId>
-                <artifactId>guava</artifactId>
-                <version>${guava.version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-fileupload</groupId>
@@ -374,6 +362,17 @@
                 </pluginManagement>
             </build>
         </profile>
+
+        <!-- use mvn -P stage to enable the remote apache-stage repo -->
+        <profile>
+            <id>stage</id>
+            <repositories>
+                <repository>
+                    <id>staged-releases</id>
+                    <url>https://repository.apache.org/content/groups/staging/</url>
+                </repository>
+            </repositories>
+        </profile>
     </profiles>
 
     <build>
@@ -439,12 +438,13 @@
                     </dependency>
                 </dependencies>
                 <configuration>
-                    <configLocation>checkstyle.xml</configLocation>
+                    <configLocation>tools/checkstyle.xml</configLocation>
                     <encoding>UTF-8</encoding>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <linkXRef>false</linkXRef>
                     <includeTestSourceDirectory>false</includeTestSourceDirectory>
+                    <suppressionsLocation>tools/suppressions.xml</suppressionsLocation>
                 </configuration>
                 <executions>
                     <execution>
@@ -500,6 +500,9 @@
                         <!-- Maven -->
                         <exclude>.repository/**</exclude>
                         <exclude>**/.flattened-pom.xml</exclude>
+                        <!-- Go -->
+                        <exclude>**/hugegraph-client-go/go.sum</exclude>
+                        <exclude>**/hugegraph-client-go/go.mod</exclude>
                     </excludes>
                     <consoleOutput>true</consoleOutput>
                 </configuration>

@@ -25,15 +25,16 @@ HUGEGRAPH_GIT_URL="https://github.com/apache/hugegraph.git"
 GIT_DIR=hugegraph
 
 # download code and compile
-git clone --depth 100 $HUGEGRAPH_GIT_URL $GIT_DIR
+git clone --depth 150 $HUGEGRAPH_GIT_URL $GIT_DIR
 cd "${GIT_DIR}"
 git checkout "${COMMIT_ID}"
 mvn package -DskipTests -Dmaven.javadoc.skip=true -ntp
 
 # TODO: lack incubator after apache package release (update it later)
+cd hugegraph-server
 TAR=$(echo apache-hugegraph-*.tar.gz)
-tar zxf "${TAR}" -C ../
-cd ../
+tar zxf "${TAR}" -C ../../
+cd ../../
 rm -rf "${GIT_DIR}"
 # TODO: lack incubator after apache package release (update it later)
 HTTP_SERVER_DIR=$(echo apache-hugegraph-*.*)

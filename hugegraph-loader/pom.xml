@@ -30,11 +30,11 @@
     <packaging>jar</packaging>
 
     <name>${project.artifactId}</name>
-    <url>https://github.com/apache/incubator-hugegraph-toolchain/tree/master/hugegraph-loader</url>
+    <url>https://github.com/apache/hugegraph-toolchain/tree/master/hugegraph-loader</url>
     <description>
         hugegraph-loader is a customizable command line utility for loading small to medium size
-        graph datasets
-        into the HugeGraph database from multiple data sources with various input formats.
+        graph datasets into the HugeGraph database from multiple data sources with various
+        input formats.
     </description>
 
     <properties>
@@ -51,6 +51,7 @@
         <mysql.connector.version>8.0.28</mysql.connector.version>
         <postgres.version>42.4.1</postgres.version>
         <mssql.jdbc.version>7.2.0.jre8</mssql.jdbc.version>
+        <kafka.testcontainer.version>1.19.0</kafka.testcontainer.version>
     </properties>
 
     <dependencies>
@@ -90,7 +91,16 @@
                     <artifactId>jersey-server</artifactId>
                     <groupId>org.glassfish.jersey.core</groupId>
                 </exclusion>
+                <exclusion>
+                    <artifactId>gson</artifactId>
+                    <groupId>com.google.code.gson</groupId>
+                </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <artifactId>gson</artifactId>
+            <groupId>com.google.code.gson</groupId>
+            <version>${gson.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
@@ -166,6 +176,10 @@
                     <groupId>com.fasterxml.jackson.jaxrs</groupId>
                     <artifactId>*</artifactId>
                 </exclusion>
+                <exclusion>
+                    <artifactId>error_prone_annotations</artifactId>
+                    <groupId>com.google.errorprone</groupId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -191,10 +205,6 @@
             <artifactId>sfm-csv</artifactId>
             <version>${sfm.csv.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
 
         <!--hbase -->
         <dependency>
@@ -217,6 +227,10 @@
                 <exclusion>
                     <groupId>com.sun.jersey</groupId>
                     <artifactId>jersey-json</artifactId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>error_prone_annotations</artifactId>
+                    <groupId>com.google.errorprone</groupId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -349,13 +363,24 @@
                     <groupId>org.apache.commons</groupId>
                     <artifactId>commons-compress</artifactId>
                 </exclusion>
+                <exclusion>
+                    <artifactId>guava</artifactId>
+                    <groupId>com.google.guava</groupId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs-client</artifactId>
             <version>${hadoop.version}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>okhttp</artifactId>
+                    <groupId>com.squareup.okhttp</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
+        <!-- TODO: slim hadoop depedenencies -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapred</artifactId>
@@ -506,6 +531,17 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>kafka</artifactId>
+            <version>${kafka.testcontainer.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <profiles>
@@ -606,6 +642,17 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>kafka</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <source_type>kafka</source_type>
+                <store_path>/files</store_path>
+                <test-classes>**/KafkaLoadTest.java</test-classes>
+            </properties>
+        </profile>
     </profiles>
 
     <build>
@@ -613,6 +660,37 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.4.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <finalName>${final.name}-shaded</finalName>
+                            <relocations>
+                                <relocation>
+                                    <pattern>com.google.common.base</pattern>
+                                    <shadedPattern>shaded.com.google.common.base</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>okio</pattern>
+                                    <shadedPattern>shaded.okio</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>okhttp3</pattern>
+                                    <shadedPattern>shaded.okhttp3</shadedPattern>
+                                </relocation>
+                            </relocations>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
