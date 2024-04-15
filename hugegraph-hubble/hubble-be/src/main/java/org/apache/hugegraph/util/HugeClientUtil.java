@@ -21,15 +21,16 @@ package org.apache.hugegraph.util;
 import java.util.Set;
 
 import org.apache.hugegraph.common.Constant;
+import org.apache.hugegraph.driver.HugeClient;
 import org.apache.hugegraph.entity.GraphConnection;
 import org.apache.hugegraph.exception.ExternalException;
-import org.springframework.web.util.UriComponentsBuilder;
-
-import org.apache.hugegraph.driver.HugeClient;
+import org.apache.hugegraph.exception.GenericException;
 import org.apache.hugegraph.exception.ServerException;
 import org.apache.hugegraph.rest.ClientException;
 import org.apache.hugegraph.structure.gremlin.Result;
 import org.apache.hugegraph.structure.gremlin.ResultSet;
+import org.springframework.web.util.UriComponentsBuilder;
+
 import com.google.common.collect.ImmutableSet;
 
 public final class HugeClientUtil {
@@ -48,15 +49,12 @@ public final class HugeClientUtil {
         String password = connection.getPassword();
         int timeout = connection.getTimeout();
         String protocol = connection.getProtocol() == null ?
-                          DEFAULT_PROTOCOL :
-                          connection.getProtocol();
+                          DEFAULT_PROTOCOL : connection.getProtocol();
         String trustStoreFile = connection.getTrustStoreFile();
         String trustStorePassword = connection.getTrustStorePassword();
 
         String url = UriComponentsBuilder.newInstance()
-                                         .scheme(protocol)
-                                         .host(host).port(port)
-                                         .toUriString();
+                                         .scheme(protocol).host(host).port(port).toUriString();
         if (username == null) {
             username = "";
             password = "";
@@ -65,8 +63,10 @@ public final class HugeClientUtil {
         try {
             client = HugeClient.builder(url, graph)
                                .configUser(username, password)
+                               // TODO: change it to connTimeout & readTimeout
                                .configTimeout(timeout)
                                .configSSL(trustStoreFile, trustStorePassword)
+                               .configHttpBuilder(http -> http.followRedirects(false))
                                .build();
         } catch (IllegalStateException e) {
             String message = e.getMessage();
@@ -74,7 +74,7 @@ public final class HugeClientUtil {
                 throw new ExternalException("client-server.version.unmatched", e);
             }
             if (message != null && (message.startsWith("Error loading trust store from") ||
-                message.startsWith("Cannot find trust store file"))) {
+                                    message.startsWith("Cannot find trust store file"))) {
                 throw new ExternalException("https.load.truststore.error", e);
             }
             throw e;
@@ -82,15 +82,12 @@ public final class HugeClientUtil {
             String message = e.getMessage();
             if (Constant.STATUS_UNAUTHORIZED == e.status() ||
                 (message != null && message.startsWith("Authentication"))) {
-                throw new ExternalException(
-                          "graph-connection.username-or-password.incorrect", e);
+                throw new ExternalException("graph-connection.username-or-password.incorrect", e);
             }
-            if (message != null && message.contains("Invalid syntax for " +
-                                                    "username and password")) {
-                throw new ExternalException(
-                          "graph-connection.missing-username-password", e);
+            if (message != null && message.contains("Invalid syntax for username and password")) {
+                throw new ExternalException("graph-connection.missing-username-password", e);
             }
-            throw e;
+            throw new GenericException(e);
         } catch (ClientException e) {
             Throwable cause = e.getCause();
             if (cause == null || cause.getMessage() == null) {
@@ -103,10 +100,11 @@ public final class HugeClientUtil {
                        message.contains("Host name may not be null")) {
                 throw new ExternalException("service.unknown-host", e, host);
             } else if (message.contains("<!doctype html>")) {
-                throw new ExternalException("service.suspected-web",
-                                            e, host, port);
+                throw new ExternalException("service.suspected-web", e, host, port);
             }
             throw e;
+        } catch (Exception e) {
+            throw new GenericException(e);
         }
 
         try {
@@ -114,13 +112,11 @@ public final class HugeClientUtil {
             rs.iterator().forEachRemaining(Result::getObject);
         } catch (ServerException e) {
             if (Constant.STATUS_UNAUTHORIZED == e.status()) {
-                throw new ExternalException(
-                          "graph-connection.username-or-password.incorrect", e);
+                throw new ExternalException("graph-connection.username-or-password.incorrect", e);
             }
             String message = e.message();
             if (message != null && message.contains("Could not rebind [g]")) {
-                throw new ExternalException("graph-connection.graph.unexist", e,
-                                            graph, host, port);
+                throw new ExternalException("graph-connection.graph.unexist", e, graph, host, port);
             }
             if (!isAcceptable(message)) {
                 throw e;

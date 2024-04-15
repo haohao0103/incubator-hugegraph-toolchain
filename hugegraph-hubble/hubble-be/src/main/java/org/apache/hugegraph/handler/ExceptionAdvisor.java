@@ -18,7 +18,10 @@
 
 package org.apache.hugegraph.handler;
 
+import org.apache.hugegraph.common.Constant;
+import org.apache.hugegraph.common.Response;
 import org.apache.hugegraph.exception.ExternalException;
+import org.apache.hugegraph.exception.GenericException;
 import org.apache.hugegraph.exception.IllegalGremlinException;
 import org.apache.hugegraph.exception.InternalException;
 import org.apache.hugegraph.exception.ParameterizedException;
@@ -27,9 +30,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import org.apache.hugegraph.common.Constant;
-import org.apache.hugegraph.common.Response;
 
 import lombok.extern.log4j.Log4j2;
 
@@ -61,6 +61,18 @@ public class ExceptionAdvisor {
                        .status(e.status())
                        .message(message)
                        .cause(e.getCause())
+                       .build();
+    }
+
+    @ExceptionHandler(GenericException.class)
+    @ResponseStatus(HttpStatus.OK)
+    public Response exceptionHandler(GenericException e) {
+        log.error("GenericException:", e);
+        return Response.builder()
+                       .status(Constant.STATUS_BAD_REQUEST)
+                       .message("Faied to connect the graph server. Please refer to the " +
+                                "Hubble log for details.")
+                       .cause(null)
                        .build();
     }
 

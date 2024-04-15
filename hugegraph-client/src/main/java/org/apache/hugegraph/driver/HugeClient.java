@@ -21,11 +21,17 @@ import java.io.Closeable;
 
 import org.apache.hugegraph.client.RestClient;
 import org.apache.hugegraph.rest.ClientException;
+import org.apache.hugegraph.rest.RestClientConfig;
 import org.apache.hugegraph.util.VersionUtil;
 import org.apache.hugegraph.version.ClientVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The HugeClient class is the main entry point for interacting with a HugeGraph server.
+ * It provides methods for managing graphs, schemas, jobs, tasks, and other resources.
+ * It also implements the Closeable interface, so it can be used in a try-with-resources statement.
+ */
 public class HugeClient implements Closeable {
 
     private static final Logger LOG = LoggerFactory.getLogger(RestClient.class);
@@ -50,24 +56,37 @@ public class HugeClient implements Closeable {
     private AuthManager auth;
     private MetricsManager metrics;
 
+    /**
+     * Constructs a new HugeClient using the provided builder.
+     *
+     * @param builder the HugeClientBuilder to use for configuration
+     */
     public HugeClient(HugeClientBuilder builder) {
         this.borrowedClient = false;
+        RestClientConfig config;
         try {
-            this.client = new RestClient(builder.url(),
-                                         builder.username(),
-                                         builder.password(),
-                                         builder.timeout(),
-                                         builder.maxConns(),
-                                         builder.maxConnsPerRoute(),
-                                         builder.trustStoreFile(),
-                                         builder.trustStorePassword());
+            config = RestClientConfig.builder()
+                                     .user(builder.username())
+                                     .password(builder.password())
+                                     .timeout(builder.timeout())
+                                     .connectTimeout(builder.connectTimeout())
+                                     .readTimeout(builder.readTimeout())
+                                     .maxConns(builder.maxConns())
+                                     .maxConnsPerRoute(builder.maxConnsPerRoute())
+                                     .trustStoreFile(builder.trustStoreFile())
+                                     .trustStorePassword(builder.trustStorePassword())
+                                     .builderCallback(builder.httpBuilderConsumer())
+                                     .build();
+            this.client = new RestClient(builder.url(), config);
         } catch (Exception e) {
             LOG.warn("Failed to create RestClient instance", e);
             throw new ClientException("Failed to connect url '%s'", builder.url());
         }
+
         try {
             this.initManagers(this.client, builder.graph());
         } catch (Throwable e) {
+            // TODO: catch some exception(like IO/Network related) rather than throw Throwable
             this.client.close();
             throw e;
         }
